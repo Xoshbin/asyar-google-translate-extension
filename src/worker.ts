@@ -7,7 +7,7 @@ import {
   type ExtensionContext,
   type ExtensionResult,
   type INetworkService,
-  type INotificationService,
+  type IFeedbackService,
   type IStorageService,
   type ICacheService,
   type IToolsService,
@@ -26,7 +26,7 @@ ctx.setExtensionId(extensionId);
 
 // Service handles
 const network    = ctx.getService<INetworkService>('network');
-const notif      = ctx.getService<INotificationService>('notifications');
+const notif      = ctx.getService<IFeedbackService>('feedback');
 const storage    = ctx.getService<IStorageService>('storage');
 const cache      = ctx.getService<ICacheService>('cache');
 const tools      = ctx.getService<IToolsService>('tools');
@@ -167,7 +167,7 @@ async function notifyError(err: unknown, preview: string): Promise<void> {
   const msg = err instanceof TranslateError
     ? err.message
     : 'Unexpected translation error';
-  await notif.send({
+  await notif.sendBackground({
     title: 'Translate failed',
     body: `${msg} — "${truncate(preview, 40)}"`,
   });
