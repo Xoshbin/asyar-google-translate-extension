@@ -1,7 +1,4 @@
-import {
-  ExtensionContext as WorkerExtensionContext,
-  extensionBridge,
-} from 'asyar-sdk/worker';
+import { ExtensionContext as WorkerExtensionContext, extensionBridge } from 'asyar-sdk/worker';
 import {
   type Extension,
   type ExtensionContext,
@@ -25,11 +22,11 @@ const ctx = new WorkerExtensionContext();
 ctx.setExtensionId(extensionId);
 
 // Service handles
-const network    = ctx.getService<INetworkService>('network');
-const notif      = ctx.getService<IFeedbackService>('feedback');
-const storage    = ctx.getService<IStorageService>('storage');
-const cache      = ctx.getService<ICacheService>('cache');
-const tools      = ctx.getService<IToolsService>('tools');
+const network = ctx.getService<INetworkService>('network');
+const notif = ctx.getService<IFeedbackService>('feedback');
+const storage = ctx.getService<IStorageService>('storage');
+const cache = ctx.getService<ICacheService>('cache');
+const tools = ctx.getService<IToolsService>('tools');
 
 const TARGET_LANG_KEY = 'ui:targetLang';
 const PENDING_QUERY_KEY = 'ui:pendingQuery';
@@ -39,16 +36,13 @@ const PENDING_QUERY_KEY = 'ui:pendingQuery';
 // at module scope so the handler is live as soon as the worker iframe loads —
 // extension.initialize() is only called if the extension explicitly invokes
 // extensionBridge.initializeExtensions(), which we don't (and don't need to).
-ctx.onRequest<history.AddInput, void>(
-  'translate-completed',
-  async (payload, _signal) => {
-    try {
-      await writeHistoryIfEnabled(payload);
-    } catch {
-      // History is best-effort — never bubble the failure to the view.
-    }
-  },
-);
+ctx.onRequest<history.AddInput, void>('translate-completed', async (payload, _signal) => {
+  try {
+    await writeHistoryIfEnabled(payload);
+  } catch {
+    // History is best-effort — never bubble the failure to the view.
+  }
+});
 
 // Tool registration is async, but fire-and-forget at module scope. Same
 // reason as above: no initialize() phase, so we do it here.
@@ -71,40 +65,34 @@ class GoogleTranslateExt implements Extension {
     const q = query.trim();
     if (q.length < 2) return [];
     const target = await getStickyTarget();
-    return [{
-      score: 0.35,
-      title: `Translate "${truncate(q, 40)}" → ${labelOf(target)}`,
-      subtitle: 'Open Google Translate',
-      type: 'view',
-      icon: '🌐',
-      viewPath: `${extensionId}/TranslateView`,
-      action: () => {
-        // Host opens TranslateView; query is delivered via the storage mailbox
-        // (TranslateView reads PENDING_QUERY_KEY on mount and clears it).
-        void storage.set(PENDING_QUERY_KEY, q);
+    return [
+      {
+        score: 0.35,
+        title: `Translate "${truncate(q, 40)}" → ${labelOf(target)}`,
+        subtitle: 'Open Google Translate',
+        type: 'view',
+        icon: '🌐',
+        viewPath: `${extensionId}/TranslateView`,
+        action: () => {
+          // Host opens TranslateView; query is delivered via the storage mailbox
+          // (TranslateView reads PENDING_QUERY_KEY on mount and clears it).
+          void storage.set(PENDING_QUERY_KEY, q);
+        },
       },
-    }];
+    ];
   }
 }
 
 const ext = new GoogleTranslateExt();
-extensionBridge.registerManifest(manifest as unknown as Parameters<typeof extensionBridge.registerManifest>[0]);
-extensionBridge.registerExtensionImplementation(extensionId, ext);
-
-window.parent.postMessage(
-  { type: 'asyar:extension:loaded', extensionId, role: 'worker' },
-  '*',
+extensionBridge.registerManifest(
+  manifest as unknown as Parameters<typeof extensionBridge.registerManifest>[0],
 );
+extensionBridge.registerExtensionImplementation(extensionId, ext);
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function resolveExtensionId(): string {
-  const fallback = 'org.asyar.google-translate';
-  if (window.location.hostname === 'localhost' ||
-      window.location.hostname === 'asyar-extension.localhost') {
-    return window.location.pathname.split('/').filter(Boolean)[0] || fallback;
-  }
-  return window.location.hostname || fallback;
+  return manifest.id;
 }
 
 async function getStickyTarget(): Promise<string> {
@@ -125,11 +113,7 @@ async function getSourcePref(): Promise<string> {
   return 'auto';
 }
 
-async function translateCached(
-  from: string,
-  to: string,
-  text: string,
-): Promise<TranslateResult> {
+async function translateCached(from: string, to: string, text: string): Promise<TranslateResult> {
   const cached = await getCached(cache, from, to, text);
   if (cached) return cached;
   const result = await translate(network, { from, to, text });
@@ -145,17 +129,13 @@ async function writeHistoryIfEnabled(input: history.AddInput): Promise<void> {
 }
 
 async function registerTranslateTool(): Promise<void> {
-  const tool = (manifest.tools as ManifestTool[] | undefined)?.find(
-    (t) => t.id === 'translate',
-  );
+  const tool = (manifest.tools as ManifestTool[] | undefined)?.find((t) => t.id === 'translate');
   if (!tool) return;
   await tools.registerTool(tool, async (args: unknown) => {
     const a = (args ?? {}) as { text?: unknown; to?: unknown; from?: unknown };
     const text = String(a.text ?? '');
-    const to   = String(a.to ?? '');
-    const from = a.from === undefined || a.from === null
-      ? 'auto'
-      : String(a.from);
+    const to = String(a.to ?? '');
+    const from = a.from === undefined || a.from === null ? 'auto' : String(a.from);
     if (!text || !to) {
       throw new Error('translate tool: text and to are required');
     }
@@ -164,9 +144,7 @@ async function registerTranslateTool(): Promise<void> {
 }
 
 async function notifyError(err: unknown, preview: string): Promise<void> {
-  const msg = err instanceof TranslateError
-    ? err.message
-    : 'Unexpected translation error';
+  const msg = err instanceof TranslateError ? err.message : 'Unexpected translation error';
   await notif.sendBackground({
     title: 'Translate failed',
     body: `${msg} — "${truncate(preview, 40)}"`,
