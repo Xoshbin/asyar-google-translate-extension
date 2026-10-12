@@ -1,12 +1,12 @@
 {
   "id": "org.asyar.google-translate",
   "name": "Google Translate",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Translate text using Google Translate. Auto-detect source, sticky target, history, and agent integration.",
   "author": "Asyar",
   "icon": "🌐",
   "type": "extension",
-  "asyarSdk": "^4.3.0",
+  "asyarSdk": "^4.15.0",
   "background": {
     "main": "dist/worker.js"
   },
@@ -1018,30 +1018,7 @@
             "title": "Chinese (Traditional)"
           }
         ]
-      },
-      "actions": [
-        {
-          "id": "swap",
-          "title": "Swap languages",
-          "icon": "🔁",
-          "shortcut": "⌘S",
-          "category": "Translate"
-        },
-        {
-          "id": "copy-pron",
-          "title": "Copy pronunciation",
-          "icon": "🔊",
-          "shortcut": "⌘P",
-          "category": "Translate"
-        },
-        {
-          "id": "open-history",
-          "title": "Open history",
-          "icon": "🕘",
-          "shortcut": "⌘H",
-          "category": "Translate"
-        }
-      ]
+      }
     },
     {
       "id": "translate-selection",
@@ -1371,38 +1348,7 @@
       "description": "Browse, repeat, pin past translations.",
       "icon": "🕘",
       "mode": "view",
-      "component": "HistoryView",
-      "actions": [
-        {
-          "id": "retranslate",
-          "title": "Re-translate",
-          "shortcut": "⌘R",
-          "category": "Entry"
-        },
-        {
-          "id": "copy-entry",
-          "title": "Copy translation",
-          "shortcut": "⌘C",
-          "category": "Entry"
-        },
-        {
-          "id": "pin-entry",
-          "title": "Pin / unpin",
-          "shortcut": "⌘P",
-          "category": "Entry"
-        },
-        {
-          "id": "delete-entry",
-          "title": "Delete entry",
-          "shortcut": "⌘⌫",
-          "category": "Entry"
-        },
-        {
-          "id": "clear-all",
-          "title": "Clear all history",
-          "category": "Entry"
-        }
-      ]
+      "component": "HistoryView"
     }
   ],
   "tools": [
