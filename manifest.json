@@ -4,9 +4,9 @@
   "version": "1.0.3",
   "description": "Translate text using Google Translate. Auto-detect source, sticky target, history, and agent integration.",
   "author": "Asyar",
-  "icon": "🌐",
+  "icon": "assets/icon.png",
   "type": "extension",
-  "asyarSdk": "^4.15.0",
+  "asyarSdk": "^4.17.0",
   "background": {
     "main": "dist/worker.js"
   },
