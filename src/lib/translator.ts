@@ -12,8 +12,10 @@ export interface TranslateOptions {
 
 export interface TranslateResult {
   translatedText: string;
-  detectedFrom: string;    // resolved ISO code, never 'auto'
+  detectedFrom: string; // resolved ISO code, never 'auto'
   pronunciation?: string;
+  sourcePronunciation?: string;
+  alternatives?: string[];
 }
 
 export class TranslateError extends Error {
@@ -36,6 +38,8 @@ export async function translate(
   params.set('hl', opts.to);
   params.append('dt', 't');
   params.append('dt', 'rm');
+  params.append('dt', 'bd');
+  params.append('dt', 'at');
   params.set('ie', 'UTF-8');
   params.set('oe', 'UTF-8');
   params.set('q', opts.text);
@@ -74,39 +78,59 @@ export function parseGoogleResponse(
   const segments = raw[0] as unknown[];
   let translatedText = '';
   let pronunciation: string | undefined;
+  let sourcePronunciation: string | undefined;
 
-  // Google's response shape (with dt=t&dt=rm): translation segments have a
-  // non-null seg[0] (the translated text) and a numeric seg[4]. The
-  // romanization segment, when present, is a *separate* trailing segment with
-  // seg[0]=null and the pronunciation string at seg[3] (older variants used
-  // seg[2]). If Google ever puts pronunciation on the same segment as the
-  // translation, the `else if` below would silently drop it — fine today,
-  // worth knowing if behavior ever changes.
   for (const seg of segments) {
     if (!Array.isArray(seg)) continue;
     const translated = typeof seg[0] === 'string' ? (seg[0] as string) : null;
-    // Google's romanization segment lives at index 3 in the real endpoint
-    // response shape (when dt=rm is requested). Some segment layouts can
-    // also surface it at index 2 in older/alt response variants; we accept
-    // either, preferring the first one we see.
-    const pron =
-      typeof seg[3] === 'string' && seg[3].length > 0
-        ? (seg[3] as string)
-        : typeof seg[2] === 'string' && seg[2].length > 0
-        ? (seg[2] as string)
-        : null;
     if (translated !== null) {
       translatedText += translated;
-    } else if (pron && !pronunciation) {
-      pronunciation = pron;
+    } else {
+      const p2 = typeof seg[2] === 'string' && seg[2].length > 0 ? (seg[2] as string) : null;
+      const p3 = typeof seg[3] === 'string' && seg[3].length > 0 ? (seg[3] as string) : null;
+      if (p2 && p3) {
+        if (!pronunciation) pronunciation = p2;
+        if (!sourcePronunciation) sourcePronunciation = p3;
+      } else if (p3 && !pronunciation) {
+        pronunciation = p3;
+      } else if (p2 && !pronunciation) {
+        pronunciation = p2;
+      }
     }
   }
   if (translatedText === '') {
     throw new TranslateError('Google Translate returned no text');
   }
-  const detected = typeof raw[2] === 'string' ? (raw[2] as string) : null;
+
+  const alternatives: string[] = [];
+  if (Array.isArray((raw as unknown[])[5])) {
+    for (const item of (raw as unknown[])[5] as unknown[]) {
+      if (Array.isArray(item) && Array.isArray(item[2])) {
+        for (const altTuple of item[2] as unknown[]) {
+          if (Array.isArray(altTuple) && typeof altTuple[0] === 'string') {
+            const altText = altTuple[0].trim();
+            if (
+              altText &&
+              altText.toLowerCase() !== translatedText.toLowerCase() &&
+              !alternatives.includes(altText)
+            ) {
+              alternatives.push(altText);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const detected = typeof (raw as unknown[])[2] === 'string' ? ((raw as unknown[])[2] as string) : null;
   const detectedFrom =
     detected && requestedFrom === 'auto' ? detected : requestedFrom;
 
-  return { translatedText, detectedFrom, ...(pronunciation ? { pronunciation } : {}) };
+  return {
+    translatedText,
+    detectedFrom,
+    ...(pronunciation ? { pronunciation } : {}),
+    ...(sourcePronunciation ? { sourcePronunciation } : {}),
+    ...(alternatives.length > 0 ? { alternatives } : {}),
+  };
 }

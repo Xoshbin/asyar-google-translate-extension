@@ -1,3 +1,4 @@
+import 'asyar-sdk/tokens.css';
 import { mount } from 'svelte';
 import {
   ExtensionContext,
@@ -8,6 +9,7 @@ import type {
   INetworkService,
   IActionService,
   IClipboardHistoryService,
+  IFeedbackService,
   IStorageService,
   ICacheService,
   IInteropService,
@@ -49,10 +51,12 @@ window.parent.postMessage(
 const network    = context.getService<INetworkService>('network');
 const actions    = context.getService<IActionService>('actions');
 const clipboard  = context.getService<IClipboardHistoryService>('clipboard');
+const feedback   = context.getService<IFeedbackService>('feedback');
 const storage    = context.getService<IStorageService>('storage');
 const cache      = context.getService<ICacheService>('cache');
 const interop    = context.getService<IInteropService>('interop');
 const selection  = context.getService<ISelectionService>('selection');
+const extensionManager = context.getService<any>('extensions');
 
 const viewName = new URLSearchParams(window.location.search).get('view') || 'TranslateView';
 const target = document.getElementById('app')!;
@@ -61,7 +65,7 @@ if (viewName === 'TranslateView') {
   mount(TranslateView, {
     target,
     props: {
-      context, network, actions, clipboard, storage, cache, interop,
+      context, network, actions, clipboard, feedback, storage, cache, interop, extensionManager,
       searchBarAccessory,
       extensionId,
     },
@@ -69,13 +73,13 @@ if (viewName === 'TranslateView') {
 } else if (viewName === 'HistoryView') {
   mount(HistoryView, {
     target,
-    props: { context, actions, clipboard, storage, interop, extensionId },
+    props: { context, actions, clipboard, feedback, storage, interop, extensionId },
   });
 } else if (viewName === 'SelectionResultView') {
   mount(SelectionResultView, {
     target,
     props: {
-      context, network, actions, clipboard, storage, cache, interop, selection,
+      context, network, actions, clipboard, feedback, storage, cache, interop, selection,
       searchBarAccessory,
       extensionId,
     },

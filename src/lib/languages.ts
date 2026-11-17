@@ -97,3 +97,11 @@ export function isLanguageCode(value: unknown): value is LanguageCode {
 export function labelOf(code: string): string {
   return NAME_BY_CODE.get(code) ?? code.toUpperCase();
 }
+
+const RTL_CODES: ReadonlySet<string> = new Set([
+  'ar', 'ckb', 'fa', 'he', 'ur', 'ps', 'sd', 'ug', 'yi',
+]);
+
+export function isRtlLanguage(code: string): boolean {
+  return RTL_CODES.has(code.toLowerCase());
+}

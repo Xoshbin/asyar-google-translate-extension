@@ -4,6 +4,7 @@
     ClipboardItemType,
     type INetworkService,
     type IClipboardHistoryService,
+    type IFeedbackService,
     type IStorageService,
     type ICacheService,
     type ISelectionService,
@@ -21,9 +22,11 @@
     context: {
       preferences: { values: Record<string, unknown> };
       request: <T = unknown>(id: string, payload?: unknown, opts?: { timeoutMs?: number }) => Promise<T>;
+      hideLauncher: () => void;
     };
     network: INetworkService;
     clipboard: IClipboardHistoryService;
+    feedback: IFeedbackService;
     storage: IStorageService;
     cache: ICacheService;
     selection: ISelectionService;
@@ -31,7 +34,7 @@
     extensionId: string;
   }
   let {
-    context, network, clipboard, storage, cache, selection,
+    context, network, clipboard, feedback, storage, cache, selection,
     searchBarAccessory, extensionId: _extensionId,
   }: Props = $props();
 
@@ -94,37 +97,54 @@
       }
       result = r;
       status = 'ready';
-      errorMsg = null;
-
-      if (applyAction) {
-        const action = await readSelectionAction();
-        if (action === 'copy' || action === 'paste') {
-          await clipboard.writeToClipboard(clipboardTextItem(r.translatedText));
-        }
-        if (action === 'paste') {
-          await clipboard.simulatePaste();
-        }
-      } else {
-        // Re-translation triggered by the user picking a new target via ⌘P —
-        // we don't re-paste (jarring) but we DO keep the clipboard updated so
-        // they can paste the new translation manually.
-        await clipboard.writeToClipboard(clipboardTextItem(r.translatedText));
-      }
-
-      // Fire-and-forget worker RPC so history is recorded.
       void context.request('translate-completed', {
         from: r.detectedFrom,
-        to,
+        to: targetLang,
         sourceText: text,
         translatedText: r.translatedText,
         pronunciation: r.pronunciation,
       }).catch(() => { /* best-effort */ });
+      if (applyAction) {
+        await applySelectionAction(text);
+      }
     } catch (err) {
       errorMsg = err instanceof TranslateError
         ? err.message
         : err instanceof Error ? err.message : 'Translation failed.';
       status = 'error';
     }
+  }
+
+  async function applySelectionAction(text: string): Promise<void> {
+    const mode = await readSelectionAction();
+    if (mode === 'paste') {
+      await clipboard.writeToClipboard(clipboardTextItem(text));
+      void clipboard.simulatePaste();
+    } else if (mode === 'hud') {
+      await clipboard.writeToClipboard(clipboardTextItem(text));
+      void feedback.showHUD('Copied to clipboard');
+    } else {
+      await clipboard.writeToClipboard(clipboardTextItem(text));
+    }
+  }
+
+  /** `⏎`: copy the translation and dismiss the view. */
+  async function copyAndDismiss() {
+    if (!result) return;
+    await clipboard.writeToClipboard(clipboardTextItem(result.translatedText));
+    void feedback.showHUD('Copied to clipboard');
+    context.hideLauncher();
+  }
+
+  /** `⌘⏎`: paste directly into the frontmost app, then dismiss. */
+  async function pasteAndDismiss() {
+    if (!result) return;
+    await clipboard.writeToClipboard(clipboardTextItem(result.translatedText));
+    const pasted = await clipboard.simulatePaste();
+    if (!pasted) {
+      void feedback.showHUD('Copied to clipboard');
+    }
+    context.hideLauncher();
   }
 
   async function runOnce() {
@@ -147,8 +167,27 @@
     await translateInto(text, to, /*applyAction*/ true);
   }
 
+  function handleKeydown(event: KeyboardEvent) {
+    if (status !== 'ready') return;
+    if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      event.preventDefault();
+      void copyAndDismiss();
+      return;
+    }
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      void pasteAndDismiss();
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      context.hideLauncher();
+    }
+  }
+
   onMount(() => {
     void runOnce();
+    window.addEventListener('keydown', handleKeydown);
 
     // Wire the search-bar accessory dropdown. The SDK fires onChange once on
     // mount with the seed value — skip that one to avoid double-translating.
@@ -168,6 +207,7 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener('keydown', handleKeydown);
     accessoryDispose?.();
   });
 </script>
@@ -179,50 +219,71 @@
     <p class="msg">No text selected in the frontmost app.</p>
     <p class="hint">Select some text in another app, then run "Translate Selection" again.</p>
   {:else if status === 'error'}
-    <p class="msg error">Translate failed.</p>
+    <p class="msg error">Translation failed.</p>
     {#if errorMsg}<p class="hint">{errorMsg}</p>{/if}
   {:else if result}
     <header class="meta">
-      <span>{labelOf(result.detectedFrom)} → {labelOf(targetLang)}</span>
+      <span>{result?.detectedFrom ? labelOf(result.detectedFrom) : 'Auto-detect'} → {labelOf(targetLang)}</span>
     </header>
     <p class="src">{sourceText}</p>
     <p class="translated" lang={targetLang}>{result.translatedText}</p>
     {#if result.pronunciation}
       <p class="pron">{result.pronunciation}</p>
     {/if}
-    <p class="hint">Copied to clipboard. Press Esc to close.</p>
+    <p class="hint">⏎ copies and closes • ⌘⏎ pastes to frontmost app • Esc closes</p>
   {/if}
 </div>
 
 <style>
+  :global(html, body) {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  :global(#app) {
+    height: 100%;
+    width: 100%;
+  }
   .selection-result {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
     padding: var(--space-4);
+    height: 100%;
+    font-family: var(--font-ui);
+    color: var(--text-primary);
   }
   .meta {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
     color: var(--text-secondary);
     font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    margin: 0;
   }
   .src {
     color: var(--text-secondary);
     margin: 0;
     padding: var(--space-2) var(--space-3);
     background: var(--bg-tertiary);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
+    white-space: pre-wrap;
+    font-family: var(--font-ui);
   }
   .translated {
     color: var(--text-primary);
     font-size: var(--font-size-xl);
-    line-height: 1.4;
+    line-height: 1.45;
     margin: 0;
     white-space: pre-wrap;
+    font-family: var(--font-ui);
   }
   .pron {
     color: var(--text-secondary);
     font-style: italic;
+    font-size: var(--font-size-sm);
     margin: 0;
   }
   .msg {

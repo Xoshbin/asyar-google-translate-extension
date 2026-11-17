@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   LANGUAGES,
   isLanguageCode,
+  isRtlLanguage,
   labelOf,
   type LanguageCode,
 } from './languages';
@@ -47,5 +48,14 @@ describe('languages', () => {
 
   it('labelOf falls back to uppercased code for unknown codes', () => {
     expect(labelOf('zz' as LanguageCode)).toBe('ZZ');
+  });
+
+  it('isRtlLanguage identifies right-to-left languages', () => {
+    expect(isRtlLanguage('ckb')).toBe(true);
+    expect(isRtlLanguage('ar')).toBe(true);
+    expect(isRtlLanguage('fa')).toBe(true);
+    expect(isRtlLanguage('he')).toBe(true);
+    expect(isRtlLanguage('en')).toBe(false);
+    expect(isRtlLanguage('es')).toBe(false);
   });
 });

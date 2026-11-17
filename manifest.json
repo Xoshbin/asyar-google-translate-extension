@@ -1021,17 +1021,59 @@
       },
       "actions": [
         {
+          "id": "copy-translation",
+          "title": "Copy translation",
+          "icon": "📋",
+          "shortcut": "⇧⌘C",
+          "category": "Translate"
+        },
+        {
+          "id": "paste-translation",
+          "title": "Paste translation",
+          "icon": "📋",
+          "shortcut": "⌘⏎",
+          "category": "Translate"
+        },
+        {
+          "id": "toggle-full-text",
+          "title": "Toggle full text",
+          "icon": "🗖",
+          "shortcut": "⌘F",
+          "category": "Translate"
+        },
+        {
+          "id": "play-tts",
+          "title": "Play text-to-speech",
+          "icon": "🔊",
+          "shortcut": "⌘T",
+          "category": "Translate"
+        },
+        {
+          "id": "open-google-translate",
+          "title": "Open in Google Translate",
+          "icon": "🌐",
+          "shortcut": "⌥⏎",
+          "category": "Translate"
+        },
+        {
+          "id": "prev-lang-set",
+          "title": "Go to previous language set",
+          "icon": "↑",
+          "shortcut": "⌥⌘↑",
+          "category": "Language Set"
+        },
+        {
+          "id": "next-lang-set",
+          "title": "Go to next language set",
+          "icon": "↓",
+          "shortcut": "⌥⌘↓",
+          "category": "Language Set"
+        },
+        {
           "id": "swap",
           "title": "Swap languages",
           "icon": "🔁",
           "shortcut": "⌘S",
-          "category": "Translate"
-        },
-        {
-          "id": "copy-pron",
-          "title": "Copy pronunciation",
-          "icon": "🔊",
-          "shortcut": "⌘P",
           "category": "Translate"
         },
         {
