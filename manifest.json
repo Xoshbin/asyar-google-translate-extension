@@ -702,7 +702,6 @@
       "id": "translate",
       "name": "Translate",
       "description": "Open an interactive translation view. Type in the launcher to translate.",
-      "icon": "🌐",
       "mode": "view",
       "component": "TranslateView",
       "searchBarAccessory": {
