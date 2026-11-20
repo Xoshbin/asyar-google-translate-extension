@@ -1473,5 +1473,11 @@
         ]
       }
     }
+  ],
+  "category": "productivity",
+  "platforms": [
+    "macos",
+    "windows",
+    "linux"
   ]
 }
