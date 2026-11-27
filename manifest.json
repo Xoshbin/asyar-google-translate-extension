@@ -1,7 +1,7 @@
 {
   "id": "org.asyar.google-translate",
   "name": "Google Translate",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Translate text using Google Translate. Auto-detect source, sticky target, history, and agent integration.",
   "author": "Asyar",
   "icon": "assets/icon.png",
